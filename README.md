@@ -23,12 +23,14 @@ media (text, video, audio), AI-generated metadata that requires human review bef
 indexing, hybrid search that balances meaning with exact keyword matching, and an 
 eval harness that measures whether retrieval is actually working.
 
-<img width="1128" height="835" alt="Screenshot 2026-06-10 at 5 19 37 PM" src="https://github.com/user-attachments/assets/c5dd2cd3-9582-4c2f-ac27-7df0ef56f980" />
+## 📸 Screenshots
 
-<img width="1339" height="860" alt="Screenshot 2026-06-10 at 5 07 47 PM" src="https://github.com/user-attachments/assets/17f47757-812e-4891-bccb-99a476b72909" />
+**Ask Sam**
+![Ask Sam](screenshots/Main.png)
+![Ask Sam Demo](screenshots/Demo.png)
 
-<img width="1675" height="863" alt="Screenshot 2026-06-10 at 5 20 24 PM" src="https://github.com/user-attachments/assets/45dbaa59-967b-4da9-a209-cc85ffef402c" />
-
+**Retrieval Eval**
+![Eval](screenshots/Eval.png)
 
 ---
 
