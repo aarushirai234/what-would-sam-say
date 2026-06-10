@@ -1,5 +1,5 @@
 # 🤔 What Would Sam Say?
-### A Multimodal Content Retrieval System
+### (Aka) A Multimodal Content Retrieval System
 
 A RAG (Retrieval Augmented Generation) pipeline that lets you have a conversation 
 with Sam Altman — grounded entirely in his own words from blogs, talks, and podcast.
