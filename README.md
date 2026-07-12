@@ -169,3 +169,94 @@ pip install -r requirements.txt
 ```
 
 Add your Anthropic API key to `.env`:
+
+```bash
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+The Streamlit app and the metadata enrichment step both use the Anthropic Python
+SDK, which reads `ANTHROPIC_API_KEY` from the environment after `load_dotenv()`.
+
+### Build the local index
+
+`data/chroma_db/` is intentionally ignored by git, so a fresh clone needs a local
+index before retrieval, evals, or the app can run:
+
+```bash
+python indexing/index.py
+```
+
+This reads `data/enriched_corpus.json`, chunks every approved document into
+500-word windows with 50-word overlap, embeds each chunk with
+`all-MiniLM-L6-v2`, and recreates the Chroma collection named `sam_docs`.
+
+### Run the app
+
+```bash
+streamlit run app.py
+```
+
+The app has two sidebar modes:
+- **Ask Sam** retrieves the top 3 hybrid-search chunks, sends them to Claude as
+  grounded context, and renders source bubbles for the answer.
+- **Eval** runs the 15-query retrieval test set from `evals/eval.py` and
+  compares semantic-only retrieval against hybrid retrieval.
+
+You can also use the terminal interface:
+
+```bash
+python retrieval/ask.py
+```
+
+## 🔁 Data pipeline runbook
+
+The checked-in JSON files under `data/` are enough to rebuild the local Chroma
+index. Re-run earlier stages only when changing the source corpus or metadata.
+
+| Stage | Command | Reads | Writes | Notes |
+|---|---|---|---|---|
+| Blog ingestion | `python ingestion/scrape_blogs.py` | `POSTS` in the script | `data/blogs.json` | Scrapes the configured `blog.samaltman.com` slugs and sleeps 1 second between requests. |
+| YouTube ingestion | `python ingestion/fetch_transcripts.py` | `VIDEOS` in the script | `data/transcripts.json` | Uses `youtube-transcript-api`; videos without available transcripts are skipped with a printed error. |
+| Podcast transcription | `python ingestion/transcribe_podcast.py` | `data/podcast.mp3` | `data/podcast.json` | Requires a local MP3 file that is gitignored; transcribes on CPU with faster-whisper `base`. |
+| Combine corpus | `python ingestion/combine_corpus.py` | `data/blogs.json`, `data/transcripts.json`, `data/podcast.json` | `data/corpus.json` | Adds sequential `doc_id` values (`doc_000`, `doc_001`, ...). |
+| Metadata enrichment | `python enrichment/enrich.py` | `data/corpus.json`, `.env` | `data/enriched_corpus.json` | Calls Claude for topics, entities, and summary; each document must be approved, edited, or rejected interactively. |
+| Indexing | `python indexing/index.py` | `data/enriched_corpus.json` | `data/chroma_db/` | Deletes and recreates the `sam_docs` Chroma collection each run. |
+
+Recommended rebuild sequence after changing source content:
+
+```bash
+python ingestion/scrape_blogs.py
+python ingestion/fetch_transcripts.py
+# Optional: only if you have data/podcast.mp3 locally
+python ingestion/transcribe_podcast.py
+python ingestion/combine_corpus.py
+python enrichment/enrich.py
+python indexing/index.py
+```
+
+## 🧪 Verification commands
+
+```bash
+# Compare semantic search and hybrid search against the 15-query eval set.
+python evals/eval.py
+
+# Inspect the retrieval behavior on a proper-noun query where BM25 helps.
+python retrieval/search.py
+```
+
+Both commands require `data/chroma_db/` to exist. If Chroma raises a missing
+collection error for `sam_docs`, run `python indexing/index.py` first.
+
+## 🧯 Troubleshooting
+
+- **`ANTHROPIC_API_KEY` errors**: confirm `.env` exists at the repo root and the
+  virtual environment is active before running `app.py`, `retrieval/ask.py`, or
+  `enrichment/enrich.py`.
+- **Missing Chroma collection**: `retrieval/search.py` loads `data/chroma_db`
+  during import and expects a collection named `sam_docs`; rebuild with
+  `python indexing/index.py`.
+- **Slow first run**: `sentence-transformers` and faster-whisper may download
+  local model files the first time they are used.
+- **Podcast rebuild fails**: `data/podcast.mp3` is not committed. Place the MP3
+  at that path before running `ingestion/transcribe_podcast.py`, or keep the
+  checked-in `data/podcast.json`.
